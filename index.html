@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style> body { margin: 0; background: #000; display: flex; justify-content: center; } </style>
+</head>
+<body>
+<script>
+    const config = {
+        type: Phaser.AUTO,
+        width: 800, height: 600,
+        physics: { default: 'arcade', arcade: { gravity: { y: 500 }, debug: false } },
+        scene: { preload: preload, create: create, update: update }
+    };
+
+    let player; // ريمي
+    let sonny;  // سوني
+    let coins;
+    let score = 100; // رصيدك الأولي يا رياض
+    let scoreText;
+
+    const game = new Phaser.Game(config);
+
+    function preload() {
+        // هنا يتم وضع روابط الصور الخاصة بريمي وسوني والصناديق
+        this.load.image('sky', 'https://labs.phaser.io/assets/skies/space3.png');
+        this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
+        this.load.image('coin', 'https://labs.phaser.io/assets/sprites/coin.png');
+        this.load.image('remy', 'https://labs.phaser.io/assets/sprites/phaser-dude.png'); // ريمي مؤقتاً
+        this.load.image('sonny', 'https://labs.phaser.io/assets/sprites/ghost.png'); // سوني مؤقتاً
+    }
+
+    function create() {
+        this.add.image(400, 300, 'sky');
+        let platforms = this.physics.add.staticGroup();
+        platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+
+        // إنشاء ريمي
+        player = this.physics.add.sprite(100, 450, 'remy');
+        player.setBounce(0.2);
+        player.setCollideWorldBounds(true);
+
+        // إنشاء سوني (يتبع ريمي)
+        sonny = this.add.sprite(80, 420, 'sonny').setScale(0.8);
+
+        // نظام النقاط
+        scoreText = this.add.text(16, 16, 'Tokens: ' + score, { fontSize: '32px', fill: '#FFF' });
+
+        this.physics.add.collider(player, platforms);
+        
+        // إعداد التحكم
+        cursors = this.input.keyboard.createCursorKeys();
+    }
+
+    function update() {
+        // تحريك ريمي
+        if (cursors.left.isDown) player.setVelocityX(-160);
+        else if (cursors.right.isDown) player.setVelocityX(160);
+        else player.setVelocityX(0);
+
+        if (cursors.up.isDown && player.body.touching.down) player.setVelocityY(-330);
+
+        // جعل سوني يتبع ريمي بسلاسة (الذكاء الاصطناعي لسوني)
+        sonny.x = Phaser.Math.Linear(sonny.x, player.x - 40, 0.1);
+        sonny.y = Phaser.Math.Linear(sonny.y, player.y - 50, 0.1);
+    }
+</script>
+</body>
+</html>

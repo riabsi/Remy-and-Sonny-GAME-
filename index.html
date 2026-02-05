@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Remy Adventure - Standard & Challenge</title>
+    <title>Remy Adventure - Pro Map Design</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
@@ -20,57 +20,65 @@
             scene: { preload: preload, create: create, update: update }
         };
 
-        let player, platforms, boxes, scoreText, bg;
-        let score = 0, jumpCount = 0, boxesHitCount = 0;
+        let player, platforms, boxes, scoreText;
+        let score = 0, jumpCount = 0;
         let moveLeft = false, moveRight = false;
-        let isChallengeMode = false;
-        let groundTop; // مرجع للأرضية الزرقاء
 
         const game = new Phaser.Game(config);
 
         function preload() {
-            // المصادر الأصلية
             this.load.image('space', 'https://labs.phaser.io/assets/skies/space3.png');
-            this.load.image('sky', 'https://labs.phaser.io/assets/skies/sky4.png'); // خلفية للمرحلة الجديدة
             this.load.image('box', 'https://labs.phaser.io/assets/sprites/block.png');
-            this.load.image('stone', 'https://labs.phaser.io/assets/sprites/platform.png'); // أحجار للمرحلة الصعبة
+            this.load.image('stone', 'https://labs.phaser.io/assets/sprites/platform.png'); 
             this.load.image('remy', 'remy.png'); 
             this.load.image('coin', 'https://labs.phaser.io/assets/sprites/coin.png');
-            
-            // الأصوات الأصلية
             this.load.audio('coinSound', 'Picked Coin Echo 2.wav');
             this.load.audio('gameMusic', 'pixel_spy_vs_spy.mp3');
         }
 
         function create() {
-            bg = this.add.image(400, 600, 'space').setScrollFactor(0).setDisplaySize(800, 1200);
+            // خلفية ممتدة
+            this.add.image(400, 600, 'space').setScrollFactor(0).setDisplaySize(800, 1200);
 
             try {
-                let music = this.sound.add('gameMusic', { volume: 0.4, loop: true });
-                music.play();
-            } catch(e) { console.log("Music error"); }
+                this.sound.add('gameMusic', { volume: 0.4, loop: true }).play();
+            } catch(e) {}
 
-            this.physics.world.setBounds(0, 0, 100000, 1200);
+            this.physics.world.setBounds(0, 0, 20000, 1200);
             platforms = this.physics.add.staticGroup();
             boxes = this.physics.add.staticGroup();
 
-            // الأرضية المفضلة (1080)
-            groundTop = this.add.rectangle(400, 1080, 100000, 60, 0x0000ff).setOrigin(0.5).setDepth(2);
-            platforms.add(groundTop);
-            this.physics.add.existing(groundTop, true);
+            // --- المرحلة الأولى: الأرضية الزرقاء (لعند مسافة 5000) ---
+            let ground = this.add.rectangle(2500, 1080, 5000, 60, 0x0000ff).setOrigin(0.5).setDepth(2);
+            platforms.add(ground);
+            this.physics.add.existing(ground, true);
 
-            // توزيع الصناديق بنظام "السلالم" (صعوبة متدرجة كما طلبت)
-            for (let i = 1; i < 60; i++) {
-                let baseX = i * 800;
-                for (let j = 0; j < 4; j++) {
-                    let x = baseX + (j * 120);
-                    let y = 850 - (j * 150); // ارتفاعات مختلفة
-                    let box = boxes.create(x, y, 'box').setScale(1).refreshBody().setDepth(3);
-                    
-                    // الذهب فقط في الصناديق العالية (الصعوبة)
-                    box.hasGold = (j >= 2); 
-                    box.isOpened = false;
+            // توزيع صناديق منوع (مش كله سلم)
+            for (let i = 1; i < 15; i++) {
+                let x = i * 400;
+                // صندوق منخفض
+                boxes.create(x, 900, 'box').setDepth(3).hasGold = false;
+                
+                // كل مسافة معينة نضع "تحدي الذهب" (صندوق عالي وقبله صناديق تساعدك للوصول له)
+                if (i % 3 === 0) {
+                    boxes.create(x + 100, 750, 'box').setDepth(3).hasGold = false;
+                    let highBox = boxes.create(x + 200, 550, 'box').setDepth(3);
+                    highBox.hasGold = true;
+                    highBox.isOpened = false;
                 }
+            }
+
+            // --- المرحلة الثانية: تصميم "الشلالات والأحجار" (تبدأ من مسافة 5500) ---
+            for (let i = 0; i < 20; i++) {
+                let px = 5500 + (i * 650);
+                let py = 1000 - (Math.random() * 300);
+                // إضافة أحجار متباعدة (لا توجد أرضية زرقاء هنا - إذا وقعت تخسر)
+                platforms.create(px, py, 'stone').setScale(2).refreshBody();
+                
+                // صناديق ذهب فوق الأحجار بصعوبة
+                let b = boxes.create(px, py - 250, 'box').setDepth(3);
+                b.hasGold = true;
+                b.isOpened = false;
             }
 
             player = this.physics.add.sprite(100, 800, 'remy').setScale(0.35).setDepth(10);
@@ -84,55 +92,30 @@
             scoreText = this.add.text(40, 50, 'Tokens: 0', { fontSize: '45px', fill: '#fff' }).setScrollFactor(0).setDepth(500);
 
             this.physics.add.collider(player, platforms);
-            
             this.physics.add.collider(player, boxes, (p, b) => {
-                if (p.body.touching.up && !b.isOpened) {
-                    if (b.hasGold) {
-                        b.isOpened = true;
-                        b.setTint(0x888888);
-                        try { this.sound.play('coinSound'); } catch(e) {}
-                        score += 10;
-                        boxesHitCount++; // نحسب الصناديق التي أعطت ذهب
-                        scoreText.setText('Tokens: ' + score);
-
-                        let coin = this.add.image(b.x, b.y - 40, 'coin').setScale(0.6).setDepth(4);
-                        this.tweens.add({ targets: coin, y: coin.y - 120, alpha: 0, duration: 600, onComplete: () => coin.destroy() });
-
-                        // الانتقال للمرحلة الصعبة بعد 20 صندوق ذهبي
-                        if (boxesHitCount >= 20 && !isChallengeMode) {
-                            startChallenge();
-                        }
-                    }
-                    this.tweens.add({ targets: b, y: b.y - 10, duration: 50, yoyo: true });
+                if (p.body.touching.up && b.hasGold && !b.isOpened) {
+                    b.isOpened = true;
+                    b.setTint(0x888888);
+                    score += 10;
+                    scoreText.setText('Tokens: ' + score);
+                    try { this.sound.play('coinSound'); } catch(e) {}
+                    let coin = this.add.image(b.x, b.y - 40, 'coin').setScale(0.6);
+                    this.tweens.add({ targets: coin, y: coin.y - 120, alpha: 0, duration: 600, onComplete: () => coin.destroy() });
                 }
+                if (p.body.touching.up) this.tweens.add({ targets: b, y: b.y - 10, duration: 50, yoyo: true });
             });
 
-            // --- الأزرار الأصلية ---
-            setupButtons.call(this);
+            setupControls.call(this);
         }
 
-        function startChallenge() {
-            isChallengeMode = true;
-            bg.setTexture('sky'); // تغيير الخلفية للسماء
-            groundTop.destroy(); // إزالة الأرضية الزرقاء لخلق "الأخطار" والحفر
-            
-            // إضافة منصات "أحجار" متباعدة بدلاً من الأرضية المستمرة
-            for (let i = 0; i < 30; i++) {
-                let px = player.x + 600 + (i * 700);
-                let py = 1000 - (Math.random() * 200);
-                platforms.create(px, py, 'stone').setScale(2).refreshBody();
-            }
-        }
-
-        function setupButtons() {
+        function setupControls() {
             const btnY = 1140; 
             const leftBtn = this.add.circle(120, btnY, 90, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(500);
             const rightBtn = this.add.circle(680, btnY, 90, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(500);
             const jumpBtn = this.add.rectangle(400, btnY, 300, 130, 0xffffff, 0.5).setInteractive().setScrollFactor(0).setDepth(500);
-            
-            this.add.text(100, btnY - 35, '<', { fontSize: '70px', fill: '#000' }).setScrollFactor(0).setDepth(501);
-            this.add.text(660, btnY - 35, '>', { fontSize: '70px', fill: '#000' }).setScrollFactor(0).setDepth(501);
-            this.add.text(340, btnY - 25, 'JUMP', { fontSize: '45px', fill: '#000', fontStyle: 'bold' }).setScrollFactor(0).setDepth(501);
+            this.add.text(100, btnY-35, '<', {fontSize:'70px', fill:'#000'}).setScrollFactor(0);
+            this.add.text(660, btnY-35, '>', {fontSize:'70px', fill:'#000'}).setScrollFactor(0);
+            this.add.text(340, btnY-25, 'JUMP', {fontSize:'45px', fill:'#000'}).setScrollFactor(0);
 
             leftBtn.on('pointerdown', () => moveLeft = true);
             leftBtn.on('pointerup', () => moveLeft = false);
@@ -148,14 +131,12 @@
             if (moveLeft) { player.setVelocityX(-500); player.setFlipX(true); }
             else if (moveRight) { player.setVelocityX(500); player.setFlipX(false); }
             else { player.setVelocityX(0); }
-
             if (player.body.touching.down) jumpCount = 0;
-
-            // إذا سقط في الحفرة في المرحلة الصعبة
-            if (isChallengeMode && player.y > 1200) {
+            
+            // خسارة إذا سقط ريمي بين الأحجار (الحفر)
+            if (player.y > 1150) {
                 this.scene.restart();
-                isChallengeMode = false;
-                boxesHitCount = 0;
+                score = 0;
             }
         }
     </script>

@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Remy & Sonny - Edge Edition</title>
+    <title>Remy & Sonny - Fixed Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
-        canvas { display: block; width: 100vw; height: 100vh; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
@@ -15,10 +15,10 @@
         const config = {
             type: Phaser.AUTO,
             scale: {
-                mode: Phaser.Scale.ENVELOP, // يتمدد ليغطي الشاشة بالكامل
+                mode: Phaser.Scale.FIT,
                 autoCenter: Phaser.Scale.CENTER_BOTH,
                 width: 800,
-                height: 600
+                height: 1200 // زدنا الارتفاع لاستغلال طول الشاشة
             },
             physics: {
                 default: 'arcade',
@@ -42,55 +42,52 @@
         }
 
         function create() {
-            // خلفية ثابتة تغطي الشاشة
-            let bg = this.add.image(400, 300, 'space').setScrollFactor(0);
-            bg.setDisplaySize(800, 600);
+            // خلفية ثابتة تغطي الطول الجديد
+            let bg = this.add.image(400, 600, 'space').setScrollFactor(0);
+            bg.setDisplaySize(800, 1200);
 
-            this.physics.world.setBounds(0, 0, 100000, 600);
+            this.physics.world.setBounds(0, 0, 100000, 1200);
 
             platforms = this.physics.add.staticGroup();
             boxes = this.physics.add.staticGroup();
 
-            // الأرضية في أسفل الشاشة تماماً (تم خفض الـ Y إلى 580)
+            // الأرضية في مستوى منخفض جداً (عند بكسل 1150)
             for (let i = 0; i < 100; i++) {
-                platforms.create(i * 1000, 590, 'ground').setDisplaySize(1000, 40).refreshBody();
+                platforms.create(i * 1000, 1160, 'ground').setDisplaySize(1000, 80).refreshBody();
             }
 
             // صناديق عشوائية
             for (let i = 1; i < 150; i++) {
                 let x = i * 500 + Math.random() * 300;
-                let y = 450 - Math.random() * 200;
-                boxes.create(x, y, 'box').setScale(0.7).refreshBody();
+                let y = 900 - Math.random() * 400;
+                boxes.create(x, y, 'box').setScale(1).refreshBody();
             }
 
-            player = this.physics.add.sprite(100, 500, 'remy').setScale(1.8);
+            player = this.physics.add.sprite(100, 1000, 'remy').setScale(2);
             player.setCollideWorldBounds(true);
-            sonny = this.add.sprite(100, 450, 'sonny').setScale(1.4);
+            sonny = this.add.sprite(100, 950, 'sonny').setScale(1.5);
 
+            // الكاميرا تتبع اللاعب مع تركيز على الأسفل
             this.cameras.main.startFollow(player, true, 0.1, 0.1);
-            this.cameras.main.setBounds(0, 0, 100000, 600);
+            this.cameras.main.setBounds(0, 0, 100000, 1200);
 
-            scoreText = this.add.text(20, 20, 'Tokens: ' + score, { fontSize: '32px', fill: '#fff' }).setScrollFactor(0);
+            scoreText = this.add.text(40, 50, 'Tokens: ' + score, { fontSize: '40px', fill: '#fff' }).setScrollFactor(0);
 
             this.physics.add.collider(player, platforms);
             this.physics.add.collider(player, boxes);
 
-            // --- أزرار احترافية في الحواف السفلية تماماً ---
-            const btnY = 550; // خفض الأزرار لأقصى حد
+            // --- الأزرار في أسفل الكادر الجديد (ثابتة) ---
+            const btnY = 1100; 
 
-            // زر اليسار (أزرق شفاف)
-            const leftBtn = this.add.circle(60, btnY, 50, 0x007bff, 0.3).setInteractive().setScrollFactor(0);
-            this.add.text(45, btnY - 25, '<', { fontSize: '40px', fill: '#fff' }).setScrollFactor(0);
+            const leftBtn = this.add.circle(100, btnY, 70, 0x007bff, 0.5).setInteractive().setScrollFactor(0);
+            this.add.text(85, btnY - 30, '<', { fontSize: '60px', fill: '#fff' }).setScrollFactor(0);
             
-            // زر اليمين (أزرق شفاف)
-            const rightBtn = this.add.circle(740, btnY, 50, 0x007bff, 0.3).setInteractive().setScrollFactor(0);
-            this.add.text(725, btnY - 25, '>', { fontSize: '40px', fill: '#fff' }).setScrollFactor(0);
+            const rightBtn = this.add.circle(700, btnY, 70, 0x007bff, 0.5).setInteractive().setScrollFactor(0);
+            this.add.text(685, btnY - 30, '>', { fontSize: '60px', fill: '#fff' }).setScrollFactor(0);
 
-            // زر القفز (أخضر في المنتصف ومنخفض)
-            const jumpBtn = this.add.rectangle(400, btnY, 200, 80, 0x28a745, 0.4).setInteractive().setScrollFactor(0);
-            this.add.text(360, btnY - 15, 'JUMP', { fontSize: '24px', fill: '#fff', fontStyle: 'bold' }).setScrollFactor(0);
+            const jumpBtn = this.add.rectangle(400, btnY, 250, 100, 0x28a745, 0.6).setInteractive().setScrollFactor(0);
+            this.add.text(350, btnY - 20, 'JUMP', { fontSize: '35px', fill: '#fff', fontStyle: 'bold' }).setScrollFactor(0);
 
-            // برمجة اللمس للأزرار
             leftBtn.on('pointerdown', () => moveLeft = true);
             leftBtn.on('pointerup', () => moveLeft = false);
             rightBtn.on('pointerdown', () => moveRight = true);
@@ -98,21 +95,21 @@
             jumpBtn.on('pointerdown', () => {
                 if (player.body.touching.down) {
                     jumpCount = 1;
-                    player.setVelocityY(-500);
+                    player.setVelocityY(-600);
                 } else if (jumpCount === 1) {
                     jumpCount = 2;
-                    player.setVelocityY(-600);
+                    player.setVelocityY(-700);
                 }
             });
         }
 
         function update() {
-            if (moveLeft) player.setVelocityX(-250);
-            else if (moveRight) player.setVelocityX(250);
+            if (moveLeft) player.setVelocityX(-300);
+            else if (moveRight) player.setVelocityX(300);
             else player.setVelocityX(0);
 
             sonny.x = Phaser.Math.Linear(sonny.x, player.x - 60, 0.1);
-            sonny.y = Phaser.Math.Linear(sonny.y, player.y - 80, 0.1);
+            sonny.y = Phaser.Math.Linear(sonny.y, player.y - 100, 0.1);
 
             if (player.body.touching.down) jumpCount = 0;
         }

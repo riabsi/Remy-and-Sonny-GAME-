@@ -64,7 +64,7 @@
                 box.isOpened = false;
             }
 
-            player = this.physics.add.sprite(100, 800, 'remy').setScale(0.35).setDepth(2);
+            player = this.physics.add.sprite(100, 800, 'remy').setScale(0.35).setDepth(10);
             player.setCollideWorldBounds(true);
             player.body.setSize(player.width * 0.4, 150).setOffset(player.width * 0.3, player.height - 150);
 
@@ -93,7 +93,7 @@
                     b.isOpened = true; b.setTint(0x888888);
                     this.tweens.add({ targets: b, y: b.y - 15, duration: 50, yoyo: true });
                     if (b.contentType === 'gold') {
-                        score += 10; scoreText.setText('Tokens: ' + score);
+                        score += 2; scoreText.setText('Tokens: ' + score);
                         try { this.sound.play('coinSound'); } catch(e) {}
                         let coin = this.add.image(b.x, b.y - 40, 'coin').setScale(0.6).setDepth(5);
                         this.tweens.add({ targets: coin, y: coin.y - 120, alpha: 0, duration: 600, onComplete: () => coin.destroy() });

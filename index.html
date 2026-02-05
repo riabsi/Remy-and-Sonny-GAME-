@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Remy Adventure - Mario Style</title>
+    <title>Remy Adventure - Endless Grass Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-    <style> body { margin: 0; padding: 0; overflow: hidden; background-color: #000; } canvas { display: block; } </style>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
+        canvas { display: block; }
+    </style>
 </head>
 <body>
     <script>
@@ -33,46 +36,51 @@
         }
 
         function create() {
+            // الخلفية ثابتة وتغطي الشاشة
             this.add.image(400, 600, 'space').setScrollFactor(0).setDisplaySize(800, 1200);
+
             try { this.sound.add('gameMusic', { volume: 0.4, loop: true }).play(); } catch(e) {}
 
-            this.physics.world.setBounds(0, 0, 100000, 1200);
+            // جعل العالم طويل جداً (لانهائي تقريباً)
+            this.physics.world.setBounds(0, 0, 500000, 1200);
+
             platforms = this.physics.add.staticGroup();
             boxes = this.physics.add.staticGroup();
 
-            // --- بناء الأرضية مع "فجوات" (زي صورة Kenney) ---
-            for (let i = 0; i < 100; i++) {
-                let x = i * 1200;
-                // قطعة أرض بطول 800 بكسل، بعدها فراغ (حفرة) بطول 400 بكسل
-                let groundPart = this.add.rectangle(x + 400, 1080, 800, 60, 0x0000ff).setDepth(2);
-                platforms.add(groundPart);
-                this.physics.add.existing(groundPart, true);
+            // الأرضية الزرقاء (1080) ممتدة جداً
+            let ground = this.add.rectangle(250000, 1080, 500000, 60, 0x0000ff).setOrigin(0.5).setDepth(2);
+            platforms.add(ground);
+            this.physics.add.existing(ground, true);
 
-                // طبقة العشب الأخضر فوق كل قطعة أرض
-                let grass = this.add.rectangle(x + 400, 1050, 800, 15, 0x2ecc71).setDepth(3);
+            // --- إضافة العشب الأخضر (مثل صورة ماريو الأخيرة) ---
+            // رسم خط عشب أخضر فوق الأرضية الزرقاء على طول المسار
+            for (let i = 0; i < 1000; i++) {
+                this.add.rectangle(i * 500, 1050, 505, 15, 0x2ecc71).setOrigin(0.5).setDepth(3);
             }
 
-            // --- بناء "تحديات الصور" (سلالم وصناديق ذهب) ---
-            for (let i = 1; i < 100; i++) {
-                let baseX = i * 1000;
-                
-                // سلم بسيط (3 درجات) يوصل لصندوق ذهب عالي
-                for (let j = 0; j < 3; j++) {
-                    let b = boxes.create(baseX + (j * 100), 900 - (j * 150), 'box').setDepth(4);
-                    b.hasGold = (j === 2); // الذهب فقط في أعلى درجة
-                    b.isOpened = false;
-                }
+            // توزيع الصناديق بشكل عشوائي ومنوع
+            for (let i = 1; i < 300; i++) {
+                let x = i * 450 + Math.random() * 200;
+                let y = 850 - Math.random() * 300;
+                let box = boxes.create(x, y, 'box').setScale(1).refreshBody().setDepth(4);
+                box.hasGold = Math.random() > 0.4; 
+                box.isOpened = false;
             }
 
-            player = this.physics.add.sprite(200, 800, 'remy').setScale(0.35).setDepth(10);
+            player = this.physics.add.sprite(100, 800, 'remy').setScale(0.35).setDepth(10);
             player.setCollideWorldBounds(true);
             player.body.setSize(player.width * 0.4, 150).setOffset(player.width * 0.3, player.height - 150);
 
             this.cameras.main.startFollow(player, true, 0.1, 0.1);
+            this.cameras.main.setBounds(0, 0, 500000, 1200);
 
-            // --- عداد ذهبي واضح جداً ---
-            scoreText = this.add.text(40, 50, 'Tokens: 0', { 
-                fontSize: '50px', fill: '#FFD700', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 
+            // --- عداد الذهب باللون الذهبي الواضح (#FFD700) ---
+            scoreText = this.add.text(40, 50, 'Tokens: ' + score, { 
+                fontSize: '50px', 
+                fill: '#FFD700', 
+                fontStyle: 'bold',
+                stroke: '#000',
+                strokeThickness: 5
             }).setScrollFactor(0).setDepth(500);
 
             this.physics.add.collider(player, platforms);
@@ -87,7 +95,7 @@
                 if (p.body.touching.up) this.tweens.add({ targets: b, y: b.y - 10, duration: 50, yoyo: true });
             });
 
-            // تحكم الأزرار
+            // الأزرار
             const btnY = 1140; 
             const leftBtn = this.add.circle(120, btnY, 90, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(500);
             const rightBtn = this.add.circle(680, btnY, 90, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(500);
@@ -111,8 +119,6 @@
             else if (moveRight) { player.setVelocityX(500); player.setFlipX(false); }
             else { player.setVelocityX(0); }
             if (player.body.touching.down) jumpCount = 0;
-            // إعادة اللعبة إذا سقط ريمي في الحفرة
-            if (player.y > 1150) { this.scene.restart(); score = 0; }
         }
     </script>
 </body>

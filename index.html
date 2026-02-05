@@ -112,7 +112,7 @@
                     else if (b.contentType === 'monster') {
                         // خروج الوحش
                         let mImg = ['m1', 'm2', 'm3'][Math.floor(Math.random()*3)];
-                        let monster = monsters.create(b.x, b.y - 100, mImg).setScale(3.2).setDepth(8);
+                        let monster = monsters.create(b.x, b.y - 100, mImg).setScale(3.0).setDepth(6);
                         monster.chasing = true;
                         monster.hitPlayer = false;
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Remy & Sonny - Fixed Edition</title>
+    <title>Remy & Sonny - Professional UI</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
@@ -18,7 +18,7 @@
                 mode: Phaser.Scale.FIT,
                 autoCenter: Phaser.Scale.CENTER_BOTH,
                 width: 800,
-                height: 1200 // زدنا الارتفاع لاستغلال طول الشاشة
+                height: 1200 
             },
             physics: {
                 default: 'arcade',
@@ -35,14 +35,14 @@
 
         function preload() {
             this.load.image('space', 'https://labs.phaser.io/assets/skies/space3.png');
-            this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
             this.load.image('box', 'https://labs.phaser.io/assets/sprites/block.png');
             this.load.image('remy', 'https://labs.phaser.io/assets/sprites/phaser-dude.png'); 
             this.load.image('sonny', 'https://labs.phaser.io/assets/sprites/ghost.png');
+            // سننشئ ملمس الأرضية برمجياً لنحصل على اللونين
         }
 
         function create() {
-            // خلفية ثابتة تغطي الطول الجديد
+            // خلفية الفضاء الثابتة
             let bg = this.add.image(400, 600, 'space').setScrollFactor(0);
             bg.setDisplaySize(800, 1200);
 
@@ -51,43 +51,55 @@
             platforms = this.physics.add.staticGroup();
             boxes = this.physics.add.staticGroup();
 
-            // الأرضية في مستوى منخفض جداً (عند بكسل 1150)
-            for (let i = 0; i < 100; i++) {
-                platforms.create(i * 1000, 1160, 'ground').setDisplaySize(1000, 80).refreshBody();
-            }
+            // --- تصميم الأرضية بلونين (أسود وأزرق) ---
+            // إنشاء مستطيل أسود للجزء السفلي (90 بكسل)
+            let groundBottom = this.add.rectangle(400, 1155, 100000, 90, 0x000000).setOrigin(0.5);
+            // إنشاء مستطيل أزرق للجزء العلوي (90 بكسل)
+            let groundTop = this.add.rectangle(400, 1065, 100000, 90, 0x0000ff).setOrigin(0.5);
+            
+            // إضافة الأرضية للفيزياء (السطح الذي يمشي عليه ريمي)
+            platforms.add(groundTop);
+            this.physics.add.existing(groundTop, true);
 
-            // صناديق عشوائية
+            // صناديق عشوائية فوق الأرضية الجديدة
             for (let i = 1; i < 150; i++) {
                 let x = i * 500 + Math.random() * 300;
-                let y = 900 - Math.random() * 400;
+                let y = 850 - Math.random() * 350;
                 boxes.create(x, y, 'box').setScale(1).refreshBody();
             }
 
-            player = this.physics.add.sprite(100, 1000, 'remy').setScale(2);
+            // شخصية ريمي (مرفوعة لتناسب سطح الأرضية الزرقاء)
+            player = this.physics.add.sprite(100, 950, 'remy').setScale(2.2);
             player.setCollideWorldBounds(true);
-            sonny = this.add.sprite(100, 950, 'sonny').setScale(1.5);
+            
+            // شخصية سوني
+            sonny = this.add.sprite(100, 900, 'sonny').setScale(1.6);
 
-            // الكاميرا تتبع اللاعب مع تركيز على الأسفل
             this.cameras.main.startFollow(player, true, 0.1, 0.1);
             this.cameras.main.setBounds(0, 0, 100000, 1200);
 
-            scoreText = this.add.text(40, 50, 'Tokens: ' + score, { fontSize: '40px', fill: '#fff' }).setScrollFactor(0);
+            // عداد النقاط
+            scoreText = this.add.text(40, 50, 'Tokens: ' + score, { fontSize: '45px', fill: '#fff', fontStyle: 'bold' }).setScrollFactor(0);
 
             this.physics.add.collider(player, platforms);
             this.physics.add.collider(player, boxes);
 
-            // --- الأزرار في أسفل الكادر الجديد (ثابتة) ---
-            const btnY = 1100; 
+            // --- الأزرار داخل الأرضية الملونة (ثابتة) ---
+            const btnY = 1110; // تم وضعها في منطقة الأرضية
 
-            const leftBtn = this.add.circle(100, btnY, 70, 0x007bff, 0.5).setInteractive().setScrollFactor(0);
-            this.add.text(85, btnY - 30, '<', { fontSize: '60px', fill: '#fff' }).setScrollFactor(0);
+            // زر اليسار
+            const leftBtn = this.add.circle(120, btnY, 75, 0xffffff, 0.2).setInteractive().setScrollFactor(0);
+            this.add.text(100, btnY - 35, '<', { fontSize: '70px', fill: '#fff' }).setScrollFactor(0);
             
-            const rightBtn = this.add.circle(700, btnY, 70, 0x007bff, 0.5).setInteractive().setScrollFactor(0);
-            this.add.text(685, btnY - 30, '>', { fontSize: '60px', fill: '#fff' }).setScrollFactor(0);
+            // زر اليمين
+            const rightBtn = this.add.circle(680, btnY, 75, 0xffffff, 0.2).setInteractive().setScrollFactor(0);
+            this.add.text(660, btnY - 35, '>', { fontSize: '70px', fill: '#fff' }).setScrollFactor(0);
 
-            const jumpBtn = this.add.rectangle(400, btnY, 250, 100, 0x28a745, 0.6).setInteractive().setScrollFactor(0);
-            this.add.text(350, btnY - 20, 'JUMP', { fontSize: '35px', fill: '#fff', fontStyle: 'bold' }).setScrollFactor(0);
+            // زر القفز (وسط الأرضية)
+            const jumpBtn = this.add.rectangle(400, btnY, 280, 110, 0x00ccff, 0.3).setInteractive().setScrollFactor(0);
+            this.add.text(340, btnY - 25, 'JUMP', { fontSize: '40px', fill: '#fff', fontStyle: 'bold' }).setScrollFactor(0);
 
+            // أوامر التحكم
             leftBtn.on('pointerdown', () => moveLeft = true);
             leftBtn.on('pointerup', () => moveLeft = false);
             rightBtn.on('pointerdown', () => moveRight = true);
@@ -95,21 +107,22 @@
             jumpBtn.on('pointerdown', () => {
                 if (player.body.touching.down) {
                     jumpCount = 1;
-                    player.setVelocityY(-600);
+                    player.setVelocityY(-650);
                 } else if (jumpCount === 1) {
                     jumpCount = 2;
-                    player.setVelocityY(-700);
+                    player.setVelocityY(-750);
                 }
             });
         }
 
         function update() {
-            if (moveLeft) player.setVelocityX(-300);
-            else if (moveRight) player.setVelocityX(300);
+            if (moveLeft) player.setVelocityX(-350);
+            else if (moveRight) player.setVelocityX(350);
             else player.setVelocityX(0);
 
-            sonny.x = Phaser.Math.Linear(sonny.x, player.x - 60, 0.1);
-            sonny.y = Phaser.Math.Linear(sonny.y, player.y - 100, 0.1);
+            // سوني يتبع ريمي بنعومة
+            sonny.x = Phaser.Math.Linear(sonny.x, player.x - 70, 0.1);
+            sonny.y = Phaser.Math.Linear(sonny.y, player.y - 110, 0.1);
 
             if (player.body.touching.down) jumpCount = 0;
         }

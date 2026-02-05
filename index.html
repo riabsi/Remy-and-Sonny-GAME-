@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Remy Adventure - Monster Boxes</title>
+    <title>Remy Adventure - Timed Monsters</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
@@ -31,12 +31,9 @@
             this.load.image('box', 'https://labs.phaser.io/assets/sprites/block.png');
             this.load.image('remy', 'remy.png'); 
             this.load.image('coin', 'https://labs.phaser.io/assets/sprites/coin.png');
-            
-            // تحميل صور الوحوش من الروابط التي تشبه الصور المرفقة
-            this.load.image('m1', 'https://labs.phaser.io/assets/sprites/slime.png'); // وحش أخضر
-            this.load.image('m2', 'https://labs.phaser.io/assets/sprites/space-baddie.png'); // عنكبوت/فضائي
-            this.load.image('m3', 'https://labs.phaser.io/assets/sprites/octopus.png'); // أخطبوط
-            
+            this.load.image('m1', 'https://labs.phaser.io/assets/sprites/slime.png'); 
+            this.load.image('m2', 'https://labs.phaser.io/assets/sprites/space-baddie.png'); // العنكبوت
+            this.load.image('m3', 'https://labs.phaser.io/assets/sprites/octopus.png'); 
             this.load.audio('coinSound', 'Picked Coin Echo 2.wav');
             this.load.audio('gameMusic', 'pixel_spy_vs_spy.mp3');
         }
@@ -48,7 +45,7 @@
             this.physics.world.setBounds(0, 0, 500000, 1200);
             platforms = this.physics.add.staticGroup();
             boxes = this.physics.add.staticGroup();
-            monsters = this.physics.add.group(); // مجموعة الوحوش الخارجة من الصناديق
+            monsters = this.physics.add.group();
 
             let ground = this.add.rectangle(250000, 1080, 500000, 60, 0x0000ff).setOrigin(0.5).setDepth(2);
             platforms.add(ground);
@@ -58,17 +55,12 @@
                 this.add.rectangle(i * 500, 1050, 505, 15, 0x2ecc71).setOrigin(0.5).setDepth(3);
             }
 
+            // الصناديق تعطي ذهب فقط الآن
             for (let i = 1; i < 300; i++) {
                 let x = i * 450 + Math.random() * 200;
                 let y = 850 - Math.random() * 300;
                 let box = boxes.create(x, y, 'box').setScale(1).refreshBody().setDepth(4);
-                
-                // توزيع عشوائي: ذهب أو وحش
-                let rand = Math.random();
-                if (rand > 0.7) { box.contentType = 'monster'; }
-                else if (rand > 0.3) { box.contentType = 'gold'; }
-                else { box.contentType = 'empty'; }
-                
+                box.contentType = Math.random() > 0.4 ? 'gold' : 'empty';
                 box.isOpened = false;
             }
 
@@ -86,47 +78,52 @@
             this.physics.add.collider(player, platforms);
             this.physics.add.collider(monsters, platforms);
 
-            // لمس الوحش لريمي (نقص 30 ذهبة)
             this.physics.add.overlap(player, monsters, (p, m) => {
                 if (!m.hitPlayer) {
                     m.hitPlayer = true;
                     score = Math.max(0, score - 30);
                     scoreText.setText('Tokens: ' + score);
-                    p.setTint(0xff0000); // وميض أحمر لريمي عند الإصابة
+                    p.setTint(0xff0000);
                     this.time.delayedCall(500, () => p.clearTint());
                 }
             });
 
             this.physics.add.collider(player, boxes, (p, b) => {
                 if (p.body.touching.up && !b.isOpened) {
-                    b.isOpened = true;
-                    b.setTint(0x888888);
+                    b.isOpened = true; b.setTint(0x888888);
                     this.tweens.add({ targets: b, y: b.y - 15, duration: 50, yoyo: true });
-
                     if (b.contentType === 'gold') {
                         score += 10; scoreText.setText('Tokens: ' + score);
                         try { this.sound.play('coinSound'); } catch(e) {}
                         let coin = this.add.image(b.x, b.y - 40, 'coin').setScale(0.6).setDepth(5);
                         this.tweens.add({ targets: coin, y: coin.y - 120, alpha: 0, duration: 600, onComplete: () => coin.destroy() });
-                    } 
-                    else if (b.contentType === 'monster') {
-                        // خروج الوحش
-                        let mImg = ['m1', 'm2', 'm3'][Math.floor(Math.random()*3)];
-                        let monster = monsters.create(b.x, b.y - 80, mImg).setScale(2.5).setDepth(5);
-                        monster.chasing = true;
-                        monster.hitPlayer = false;
-
-                        // ملاحقة لمدة 5 ثواني
-                        this.time.delayedCall(5000, () => {
-                            monster.chasing = false;
-                            monster.setVelocityX(player.x > monster.x ? -400 : 400); // الهروب في اتجاه معاكس
-                            this.time.delayedCall(2000, () => monster.destroy()); // يختفي بعد الهروب
-                        });
                     }
                 }
             });
 
-            // الأزرار كما هي
+            // --- نظام ظهور الوحش كل 90 ثانية من اليمين ---
+            this.time.addEvent({
+                delay: 90000, // 90 ثانية (دقيقة ونصف)
+                callback: () => {
+                    let mType = ['m1', 'm2', 'm3'][Math.floor(Math.random()*3)];
+                    // يظهر من يمين الكاميرا
+                    let spawnX = this.cameras.main.scrollX + 900;
+                    let monster = monsters.create(spawnX, 1000, mType).setDepth(5);
+                    
+                    // تكبير العنكبوت (m2) بزيادة عن البقية
+                    if(mType === 'm2') { monster.setScale(3.5); } else { monster.setScale(2.5); }
+                    
+                    monster.chasing = true;
+                    monster.hitPlayer = false;
+                    this.time.delayedCall(5000, () => {
+                        monster.chasing = false;
+                        monster.setVelocityX(500); // يهرب لليمين
+                        this.time.delayedCall(3000, () => monster.destroy());
+                    });
+                },
+                loop: true
+            });
+
             setupButtons.call(this);
         }
 
@@ -135,12 +132,24 @@
             const leftBtn = this.add.circle(120, btnY, 90, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(500);
             const rightBtn = this.add.circle(680, btnY, 90, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(500);
             const jumpBtn = this.add.rectangle(400, btnY, 300, 130, 0xffffff, 0.5).setInteractive().setScrollFactor(0).setDepth(500);
-            this.add.text(100, btnY-35, '<', {fontSize:'70px', fill:'#000'}).setScrollFactor(0);
-            this.add.text(660, btnY-35, '>', {fontSize:'70px', fill:'#000'}).setScrollFactor(0);
-            this.add.text(340, btnY-25, 'JUMP', {fontSize:'45px', fill:'#000', fontStyle:'bold'}).setScrollFactor(0);
-            leftBtn.on('pointerdown', () => moveLeft = true); leftBtn.on('pointerup', () => moveLeft = false);
-            rightBtn.on('pointerdown', () => moveRight = true); rightBtn.on('pointerup', () => moveRight = false);
-            jumpBtn.on('pointerdown', () => { if (player.body.touching.down) { jumpCount = 1; player.setVelocityY(-1100); } else if (jumpCount === 1) { jumpCount = 2; player.setVelocityY(-950); } });
+            
+            this.add.text(100, btnY-35, '<', {fontSize:'70px', fill:'#000'}).setScrollFactor(0).setDepth(501);
+            this.add.text(660, btnY-35, '>', {fontSize:'70px', fill:'#000'}).setScrollFactor(0).setDepth(501);
+            this.add.text(340, btnY-25, 'JUMP', {fontSize:'45px', fill:'#000', fontStyle:'bold'}).setScrollFactor(0).setDepth(501);
+
+            // حل مشكلة التعليق بإضافة pointerout و pointerup
+            leftBtn.on('pointerdown', () => moveLeft = true);
+            leftBtn.on('pointerup', () => moveLeft = false);
+            leftBtn.on('pointerout', () => moveLeft = false);
+
+            rightBtn.on('pointerdown', () => moveRight = true);
+            rightBtn.on('pointerup', () => moveRight = false);
+            rightBtn.on('pointerout', () => moveRight = false);
+
+            jumpBtn.on('pointerdown', () => { 
+                if (player.body.touching.down) { jumpCount = 1; player.setVelocityY(-1100); } 
+                else if (jumpCount === 1) { jumpCount = 2; player.setVelocityY(-950); } 
+            });
         }
 
         function update() {
@@ -149,12 +158,10 @@
             else { player.setVelocityX(0); }
             if (player.body.touching.down) jumpCount = 0;
 
-            // تحريك الوحوش للملاحقة
             monsters.children.iterate((m) => {
                 if (m && m.chasing) {
-                    let speed = 250;
-                    if (player.x > m.x) { m.setVelocityX(speed); m.setFlipX(false); }
-                    else { m.setVelocityX(-speed); m.setFlipX(true); }
+                    if (player.x > m.x) { m.setVelocityX(300); m.setFlipX(false); }
+                    else { m.setVelocityX(-300); m.setFlipX(true); }
                 }
             });
         }

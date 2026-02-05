@@ -62,7 +62,7 @@
 
             // --- تصغير ريمي بشكل ملحوظ ---
             player = this.physics.add.sprite(100, 800, 'remy');
-            player.setScale(0.15); // الرقم هنا 0.15 ليكون أصغر بكثير
+            player.setScale(0.25); // الرقم هنا 0.15 ليكون أصغر بكثير
             player.setDepth(10);
             player.setCollideWorldBounds(true);
             
@@ -75,7 +75,7 @@
             // --- إبعاد الكاميرا أكثر لتقليل الزوم ---
             this.cameras.main.startFollow(player, true, 0.1, 0.1);
             this.cameras.main.setBounds(0, 0, 100000, 1200);
-            this.cameras.main.setZoom(0.7); // زوم أبعد قليلاً
+            this.cameras.main.setZoom(0.85); // زوم أبعد قليلاً
 
             this.physics.add.collider(player, platforms);
             this.physics.add.collider(player, boxes);

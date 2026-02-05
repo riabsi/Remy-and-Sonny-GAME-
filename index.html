@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Remy Adventure - Surprise Boxes</title>
+    <title>Remy Adventure - Fixed</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
@@ -20,7 +20,7 @@
             scene: { preload: preload, create: create, update: update }
         };
 
-        let player, sonny, platforms, boxes, scoreText, enemies;
+        let player, sonny, platforms, boxes, scoreText;
         let score = 0, jumpCount = 0;
         let moveLeft = false, moveRight = false;
 
@@ -31,13 +31,16 @@
             this.load.image('box', 'https://labs.phaser.io/assets/sprites/block.png');
             this.load.image('remy', 'remy.png'); 
             this.load.image('sonny', 'https://labs.phaser.io/assets/sprites/ghost.png');
-            this.load.image('snake', 'earth004.png'); 
+            this.load.image('coin', 'https://labs.phaser.io/assets/sprites/coin.png'); // صورة العملة
+            
             this.load.audio('coinSound', 'Picked Coin Echo 2.wav');
             this.load.audio('gameMusic', 'pixel_spy_vs_spy.mp3');
         }
 
         function create() {
-            this.add.image(400, 600, 'space').setScrollFactor(0).setDisplaySize(800, 1200);
+            // الخلفية
+            let bg = this.add.image(400, 600, 'space').setScrollFactor(0);
+            bg.setDisplaySize(800, 1200);
 
             try {
                 let music = this.sound.add('gameMusic', { volume: 0.4, loop: true });
@@ -49,24 +52,29 @@
             platforms = this.physics.add.staticGroup();
             boxes = this.physics.add.staticGroup();
 
-            let groundTop = this.add.rectangle(400, 1080, 100000, 60, 0x0000ff).setOrigin(0.5).setDepth(2);
+            // --- تعديل الأرضية (أنزلناها للأسفل لـ 1150 بدل 1080) ---
+            let groundTop = this.add.rectangle(400, 1150, 100000, 100, 0x0000ff).setOrigin(0.5).setDepth(2);
             platforms.add(groundTop);
             this.physics.add.existing(groundTop, true);
 
+            // إنشاء الصناديق
             for (let i = 1; i < 150; i++) {
-                let x = i * 600 + Math.random() * 300;
-                let y = 850 - Math.random() * 300;
-                boxes.create(x, y, 'box').setScale(1).refreshBody().setDepth(3);
+                let x = i * 500 + Math.random() * 200;
+                let y = 950 - Math.random() * 300;
+                let box = boxes.create(x, y, 'box').setScale(1).refreshBody().setDepth(3);
+                
+                // إضافة خاصية للصندوق: هل يحتوي على ذهب؟ وهل تم ضربه؟
+                box.hasGold = Math.random() > 0.4; // 60% من الصناديق فيها ذهب
+                box.isOpened = false;
             }
 
-            player = this.physics.add.sprite(100, 800, 'remy').setScale(0.35).setDepth(10);
+            // ريمي
+            player = this.physics.add.sprite(100, 900, 'remy').setScale(0.35).setDepth(10);
             player.setCollideWorldBounds(true);
             player.body.setSize(player.width * 0.4, 150); 
             player.body.setOffset(player.width * 0.3, player.height - 150);
 
-            sonny = this.add.sprite(100, 850, 'sonny').setScale(0.8).setDepth(9);
-
-            enemies = this.physics.add.group();
+            sonny = this.add.sprite(100, 950, 'sonny').setScale(0.8).setDepth(9);
 
             this.cameras.main.startFollow(player, true, 0.1, 0.1);
             this.cameras.main.setZoom(0.95);
@@ -74,37 +82,35 @@
             scoreText = this.add.text(40, 50, 'Tokens: ' + score, { fontSize: '45px', fill: '#fff' }).setScrollFactor(0).setDepth(500);
 
             this.physics.add.collider(player, platforms);
-            this.physics.add.collider(enemies, platforms); // الوحوش تمشي فوق الأرض
 
-            // --- برمجة الصناديق (عملة أو وحش) ---
+            // --- برمجة الصناديق الجديدة ---
             this.physics.add.collider(player, boxes, (p, b) => {
                 if (p.body.touching.up) {
-                    // فرصة 30% يخرج وحش، و 70% عملة
-                    if (Math.random() < 0.3) {
-                        let enemy = enemies.create(b.x, b.y - 80, 'snake').setScale(0.7); // حجم أكبر
-                        enemy.setVelocityX(150);
-                        enemy.setBounce(1);
-                        enemy.setCollideWorldBounds(true);
-                    } else {
+                    // إذا كان الصندوق لم يفتح بعد ويحتوي على ذهب
+                    if (!b.isOpened && b.hasGold) {
+                        b.isOpened = true; // اجعله مفتوحاً فلا يعطي نقاطاً مرة أخرى
+                        b.setTint(0x888888); // تغيير لونه ليدل أنه فُرغ
+                        
                         try { this.sound.play('coinSound'); } catch(e) {}
                         score += 10;
                         scoreText.setText('Tokens: ' + score);
+
+                        // تأثير العملة التي تخرج من الصندوق
+                        let coin = this.add.image(b.x, b.y - 40, 'coin').setScale(0.6).setDepth(5);
+                        this.tweens.add({
+                            targets: coin,
+                            y: coin.y - 120,
+                            alpha: 0,
+                            duration: 600,
+                            onComplete: () => coin.destroy()
+                        });
                     }
-                    this.tweens.add({ targets: b, y: b.y - 15, duration: 50, yoyo: true });
+                    // حركة اهتزاز الصندوق حتى لو كان فارغاً
+                    this.tweens.add({ targets: b, y: b.y - 10, duration: 50, yoyo: true });
                 }
             });
 
-            this.physics.add.overlap(player, enemies, (p, e) => {
-                if (p.body.touching.down) {
-                    e.destroy();
-                    p.setVelocityY(-800);
-                    jumpCount = 1; // السماح بالقفزة الثانية بعد قتل الوحش
-                } else {
-                    this.scene.restart();
-                }
-            });
-
-            // الأزرار مع إصلاح القفزة المزدوجة
+            // الأزرار
             const btnY = 1140; 
             const leftBtn = this.add.circle(120, btnY, 90, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(500);
             const rightBtn = this.add.circle(680, btnY, 90, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(500);
@@ -117,15 +123,9 @@
             leftBtn.on('pointerup', () => moveLeft = false);
             rightBtn.on('pointerdown', () => moveRight = true);
             rightBtn.on('pointerup', () => moveRight = false);
-            
             jumpBtn.on('pointerdown', () => {
-                if (player.body.touching.down) {
-                    jumpCount = 1;
-                    player.setVelocityY(-1100);
-                } else if (jumpCount === 1) {
-                    jumpCount = 2;
-                    player.setVelocityY(-950);
-                }
+                if (player.body.touching.down) { jumpCount = 1; player.setVelocityY(-1100); }
+                else if (jumpCount === 1) { jumpCount = 2; player.setVelocityY(-950); }
             });
         }
 
@@ -136,12 +136,7 @@
 
             sonny.x = Phaser.Math.Linear(sonny.x, player.x - (player.flipX ? -40 : 40), 0.1);
             sonny.y = Phaser.Math.Linear(sonny.y, player.y - 50, 0.1);
-
-            enemies.children.iterate((enemy) => {
-                if (enemy && enemy.body && (enemy.body.blocked.left || enemy.body.blocked.right)) {
-                    enemy.setVelocityX(enemy.body.velocity.x * -1);
-                }
-            });
+            if (player.body.touching.down) jumpCount = 0;
         }
     </script>
 </body>

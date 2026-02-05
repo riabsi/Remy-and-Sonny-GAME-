@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Remy & Sonny - Touch Edition</title>
+    <title>Remy & Sonny - Edge Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
-        canvas { display: block; }
+        canvas { display: block; width: 100vw; height: 100vh; }
     </style>
 </head>
 <body>
@@ -15,14 +15,14 @@
         const config = {
             type: Phaser.AUTO,
             scale: {
-                mode: Phaser.Scale.FIT,
+                mode: Phaser.Scale.ENVELOP, // يتمدد ليغطي الشاشة بالكامل
                 autoCenter: Phaser.Scale.CENTER_BOTH,
                 width: 800,
                 height: 600
             },
             physics: {
                 default: 'arcade',
-                arcade: { gravity: { y: 1000 }, debug: false }
+                arcade: { gravity: { y: 1200 }, debug: false }
             },
             scene: { preload: preload, create: create, update: update }
         };
@@ -36,13 +36,13 @@
         function preload() {
             this.load.image('space', 'https://labs.phaser.io/assets/skies/space3.png');
             this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
-            this.load.image('box', 'https://labs.phaser.io/assets/sprites/block.png'); // صورة الصندوق
+            this.load.image('box', 'https://labs.phaser.io/assets/sprites/block.png');
             this.load.image('remy', 'https://labs.phaser.io/assets/sprites/phaser-dude.png'); 
             this.load.image('sonny', 'https://labs.phaser.io/assets/sprites/ghost.png');
         }
 
         function create() {
-            // خلفية ثابتة وملء الشاشة
+            // خلفية ثابتة تغطي الشاشة
             let bg = this.add.image(400, 300, 'space').setScrollFactor(0);
             bg.setDisplaySize(800, 600);
 
@@ -51,22 +51,21 @@
             platforms = this.physics.add.staticGroup();
             boxes = this.physics.add.staticGroup();
 
-            // إنشاء الأرضية
+            // الأرضية في أسفل الشاشة تماماً (تم خفض الـ Y إلى 580)
             for (let i = 0; i < 100; i++) {
-                platforms.create(i * 1000, 580, 'ground').setDisplaySize(1000, 40).refreshBody();
+                platforms.create(i * 1000, 590, 'ground').setDisplaySize(1000, 40).refreshBody();
             }
 
-            // إضافة صناديق عشوائية بأماكن وارتفاعات مختلفة
-            for (let i = 1; i < 200; i++) {
-                let x = i * 400 + Math.random() * 200;
-                let y = 400 - Math.random() * 250;
-                boxes.create(x, y, 'box').setScale(0.8).refreshBody();
+            // صناديق عشوائية
+            for (let i = 1; i < 150; i++) {
+                let x = i * 500 + Math.random() * 300;
+                let y = 450 - Math.random() * 200;
+                boxes.create(x, y, 'box').setScale(0.7).refreshBody();
             }
 
-            // الشخصيات
-            player = this.physics.add.sprite(100, 450, 'remy').setScale(1.8);
+            player = this.physics.add.sprite(100, 500, 'remy').setScale(1.8);
             player.setCollideWorldBounds(true);
-            sonny = this.add.sprite(100, 400, 'sonny').setScale(1.4);
+            sonny = this.add.sprite(100, 450, 'sonny').setScale(1.4);
 
             this.cameras.main.startFollow(player, true, 0.1, 0.1);
             this.cameras.main.setBounds(0, 0, 100000, 600);
@@ -76,28 +75,34 @@
             this.physics.add.collider(player, platforms);
             this.physics.add.collider(player, boxes);
 
-            // --- نظام التحكم باللمس (المناطق) ---
-            this.input.on('pointerdown', (pointer) => {
-                if (pointer.x < 250) { // منطقة اليسار
-                    moveLeft = true;
-                    moveRight = false;
-                } else if (pointer.x > 550) { // منطقة اليمين
-                    moveRight = true;
-                    moveLeft = false;
-                } else { // منطقة الوسط (القفز)
-                    if (player.body.touching.down) {
-                        jumpCount = 1;
-                        player.setVelocityY(-450);
-                    } else if (jumpCount === 1) {
-                        jumpCount = 2;
-                        player.setVelocityY(-550);
-                    }
-                }
-            });
+            // --- أزرار احترافية في الحواف السفلية تماماً ---
+            const btnY = 550; // خفض الأزرار لأقصى حد
 
-            this.input.on('pointerup', () => {
-                moveLeft = false;
-                moveRight = false;
+            // زر اليسار (أزرق شفاف)
+            const leftBtn = this.add.circle(60, btnY, 50, 0x007bff, 0.3).setInteractive().setScrollFactor(0);
+            this.add.text(45, btnY - 25, '<', { fontSize: '40px', fill: '#fff' }).setScrollFactor(0);
+            
+            // زر اليمين (أزرق شفاف)
+            const rightBtn = this.add.circle(740, btnY, 50, 0x007bff, 0.3).setInteractive().setScrollFactor(0);
+            this.add.text(725, btnY - 25, '>', { fontSize: '40px', fill: '#fff' }).setScrollFactor(0);
+
+            // زر القفز (أخضر في المنتصف ومنخفض)
+            const jumpBtn = this.add.rectangle(400, btnY, 200, 80, 0x28a745, 0.4).setInteractive().setScrollFactor(0);
+            this.add.text(360, btnY - 15, 'JUMP', { fontSize: '24px', fill: '#fff', fontStyle: 'bold' }).setScrollFactor(0);
+
+            // برمجة اللمس للأزرار
+            leftBtn.on('pointerdown', () => moveLeft = true);
+            leftBtn.on('pointerup', () => moveLeft = false);
+            rightBtn.on('pointerdown', () => moveRight = true);
+            rightBtn.on('pointerup', () => moveRight = false);
+            jumpBtn.on('pointerdown', () => {
+                if (player.body.touching.down) {
+                    jumpCount = 1;
+                    player.setVelocityY(-500);
+                } else if (jumpCount === 1) {
+                    jumpCount = 2;
+                    player.setVelocityY(-600);
+                }
             });
         }
 

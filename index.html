@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Remy & Sonny - MultiTouch</title>
+    <title>Remy & Sonny - Fixed</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
@@ -22,7 +22,7 @@
             },
             physics: {
                 default: 'arcade',
-                arcade: { gravity: { y: 1500 }, debug: false }
+                arcade: { gravity: { y: 1800 }, debug: false } // زدنا الجاذبية قليلاً ليكون القفز واقعي
             },
             input: { activePointers: 3 }, 
             scene: { preload: preload, create: create, update: update }
@@ -37,7 +37,6 @@
         function preload() {
             this.load.image('space', 'https://labs.phaser.io/assets/skies/space3.png');
             this.load.image('box', 'https://labs.phaser.io/assets/sprites/block.png');
-            // تم تغيير الرابط ليقرأ ملفك الشخصي remy.png
             this.load.image('remy', 'remy.png'); 
             this.load.image('sonny', 'https://labs.phaser.io/assets/sprites/ghost.png');
         }
@@ -51,9 +50,7 @@
             platforms = this.physics.add.staticGroup();
             boxes = this.physics.add.staticGroup();
 
-            let groundBottom = this.add.rectangle(400, 1155, 100000, 90, 0x000000).setOrigin(0.5).setDepth(1);
             let groundTop = this.add.rectangle(400, 1065, 100000, 90, 0x0000ff).setOrigin(0.5).setDepth(2);
-            
             platforms.add(groundTop);
             this.physics.add.existing(groundTop, true);
 
@@ -63,33 +60,36 @@
                 boxes.create(x, y, 'box').setScale(1).refreshBody().setDepth(3);
             }
 
-            // إضافة ريمي الجديد مع ضبط الحجم ليتناسب مع الصورة الشفافة
-            player = this.physics.add.sprite(100, 900, 'remy').setScale(0.4).setDepth(10);
+            // --- تعديل حجم ريمي ومنطقة التصادم ---
+            player = this.physics.add.sprite(100, 800, 'remy');
+            player.setScale(0.35); // تصغير الحجم ليناسب الشاشة
+            player.setDepth(10);
             player.setCollideWorldBounds(true);
             
-            // سوني يتبع ريمي
-            sonny = this.add.sprite(100, 850, 'sonny').setScale(1.6).setDepth(9);
+            // ضبط صندوق التصادم ليكون تحت قدميه فقط لكي لا "يطير"
+            player.body.setSize(player.width * 0.6, player.height * 0.8);
+            player.body.setOffset(player.width * 0.2, player.height * 0.1);
+
+            sonny = this.add.sprite(100, 850, 'sonny').setScale(1.2).setDepth(9);
 
             this.cameras.main.startFollow(player, true, 0.1, 0.1);
             this.cameras.main.setBounds(0, 0, 100000, 1200);
 
-            scoreText = this.add.text(40, 50, 'Tokens: ' + score, { fontSize: '45px', fill: '#fff' }).setScrollFactor(0).setDepth(100);
-
             this.physics.add.collider(player, platforms);
             this.physics.add.collider(player, boxes);
 
-            // --- الأزرار في أسفل الشاشة تماماً ---
-            const btnY = 1135; 
-
-            const leftBtn = this.add.circle(120, btnY, 85, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(200);
-            this.add.text(100, btnY - 35, '<', { fontSize: '70px', fill: '#000' }).setScrollFactor(0).setDepth(201);
+            // --- الأزرار في الأسفل تماماً ---
+            const btnY = 1140; 
+            const leftBtn = this.add.circle(120, btnY, 80, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(100);
+            this.add.text(100, btnY - 35, '<', { fontSize: '70px', fill: '#000' }).setScrollFactor(0).setDepth(101);
             
-            const rightBtn = this.add.circle(680, btnY, 85, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(200);
-            this.add.text(660, btnY - 35, '>', { fontSize: '70px', fill: '#000' }).setScrollFactor(0).setDepth(201);
+            const rightBtn = this.add.circle(680, btnY, 80, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(100);
+            this.add.text(660, btnY - 35, '>', { fontSize: '70px', fill: '#000' }).setScrollFactor(0).setDepth(101);
 
-            const jumpBtn = this.add.rectangle(400, btnY, 320, 120, 0xffffff, 0.5).setInteractive().setScrollFactor(0).setDepth(200);
-            this.add.text(340, btnY - 25, 'JUMP', { fontSize: '40px', fill: '#000', fontStyle: 'bold' }).setScrollFactor(0).setDepth(201);
+            const jumpBtn = this.add.rectangle(400, btnY, 280, 110, 0xffffff, 0.5).setInteractive().setScrollFactor(0).setDepth(100);
+            this.add.text(340, btnY - 25, 'JUMP', { fontSize: '40px', fill: '#000', fontStyle: 'bold' }).setScrollFactor(0).setDepth(101);
 
+            // برمجة الحركات
             leftBtn.on('pointerdown', () => moveLeft = true);
             leftBtn.on('pointerup', () => moveLeft = false);
             leftBtn.on('pointerout', () => moveLeft = false);
@@ -101,10 +101,10 @@
             jumpBtn.on('pointerdown', () => {
                 if (player.body.touching.down) {
                     jumpCount = 1;
-                    player.setVelocityY(-800);
+                    player.setVelocityY(-900); // قوة القفزة الأولى
                 } else if (jumpCount === 1) {
                     jumpCount = 2;
-                    player.setVelocityY(-850);
+                    player.setVelocityY(-800); // القفزة الثانية
                 }
             });
         }
@@ -112,14 +112,16 @@
         function update() {
             if (moveLeft) {
                 player.setVelocityX(-450);
+                player.setFlipX(true); // جعل ريمي ينظر لليسار
             } else if (moveRight) {
                 player.setVelocityX(450);
+                player.setFlipX(false); // جعل ريمي ينظر لليمين
             } else {
                 player.setVelocityX(0);
             }
 
-            sonny.x = Phaser.Math.Linear(sonny.x, player.x - 70, 0.1);
-            sonny.y = Phaser.Math.Linear(sonny.y, player.y - 110, 0.1);
+            sonny.x = Phaser.Math.Linear(sonny.x, player.x - 60, 0.1);
+            sonny.y = Phaser.Math.Linear(sonny.y, player.y - 80, 0.1);
 
             if (player.body.touching.down) jumpCount = 0;
         }

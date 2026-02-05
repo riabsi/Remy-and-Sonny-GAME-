@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Remy Adventure - Fixed Jump & Zoom</title>
+    <title>Remy Adventure - Mini Size</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
@@ -22,7 +22,7 @@
             },
             physics: {
                 default: 'arcade',
-                arcade: { gravity: { y: 2000 }, debug: false } // جاذبية أقوى لثبات الشخصية
+                arcade: { gravity: { y: 2200 }, debug: false } 
             },
             input: { activePointers: 3 }, 
             scene: { preload: preload, create: create, update: update }
@@ -50,7 +50,6 @@
             platforms = this.physics.add.staticGroup();
             boxes = this.physics.add.staticGroup();
 
-            // الأرضية الزرقاء
             let groundTop = this.add.rectangle(400, 1080, 100000, 60, 0x0000ff).setOrigin(0.5).setDepth(2);
             platforms.add(groundTop);
             this.physics.add.existing(groundTop, true);
@@ -61,27 +60,27 @@
                 boxes.create(x, y, 'box').setScale(1).refreshBody().setDepth(3);
             }
 
-            // --- إعداد ريمي الجديد لضمان القفز ---
+            // --- تصغير ريمي بشكل ملحوظ ---
             player = this.physics.add.sprite(100, 800, 'remy');
-            player.setScale(0.25); // تصغير ريمي أكثر ليناسب اللعبة
+            player.setScale(0.15); // الرقم هنا 0.15 ليكون أصغر بكثير
             player.setDepth(10);
             player.setCollideWorldBounds(true);
             
-            // ضبط صندوق التصادم ليكون صغير جداً عند الأقدام (لحل مشكلة القفز)
-            player.body.setSize(player.width * 0.5, 100); 
-            player.body.setOffset(player.width * 0.25, player.height - 100);
+            // ضبط منطقة التصادم لتناسب الحجم الصغير جداً
+            player.body.setSize(player.width * 0.4, 150); 
+            player.body.setOffset(player.width * 0.3, player.height - 150);
 
-            sonny = this.add.sprite(100, 850, 'sonny').setScale(1.0).setDepth(9);
+            sonny = this.add.sprite(100, 850, 'sonny').setScale(0.8).setDepth(9);
 
-            // --- إبعاد الكاميرا (Zoom Out) ---
+            // --- إبعاد الكاميرا أكثر لتقليل الزوم ---
             this.cameras.main.startFollow(player, true, 0.1, 0.1);
             this.cameras.main.setBounds(0, 0, 100000, 1200);
-            this.cameras.main.setZoom(0.8); // جعل الرؤية أبعد (0.8 بدلاً من 1)
+            this.cameras.main.setZoom(0.7); // زوم أبعد قليلاً
 
             this.physics.add.collider(player, platforms);
             this.physics.add.collider(player, boxes);
 
-            // --- الأزرار في الأسفل (رفعناها لـ Depth 500 لتبقى فوق كل شيء) ---
+            // --- الأزرار ---
             const btnY = 1140; 
             const leftBtn = this.add.circle(120, btnY, 90, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(500);
             this.add.text(100, btnY - 35, '<', { fontSize: '70px', fill: '#000' }).setScrollFactor(0).setDepth(501);
@@ -101,13 +100,12 @@
             rightBtn.on('pointerout', () => moveRight = false);
 
             jumpBtn.on('pointerdown', () => {
-                // القفز الآن سيعمل لأن منطقة التصادم دقيقة
                 if (player.body.touching.down || player.body.onFloor()) {
                     jumpCount = 1;
-                    player.setVelocityY(-1000); 
+                    player.setVelocityY(-1100); 
                 } else if (jumpCount === 1) {
                     jumpCount = 2;
-                    player.setVelocityY(-900);
+                    player.setVelocityY(-950);
                 }
             });
         }
@@ -123,9 +121,8 @@
                 player.setVelocityX(0);
             }
 
-            // تحديث مكان سوني ليكون خلف ريمي
-            sonny.x = Phaser.Math.Linear(sonny.x, player.x - (player.flipX ? -50 : 50), 0.1);
-            sonny.y = Phaser.Math.Linear(sonny.y, player.y - 60, 0.1);
+            sonny.x = Phaser.Math.Linear(sonny.x, player.x - (player.flipX ? -40 : 40), 0.1);
+            sonny.y = Phaser.Math.Linear(sonny.y, player.y - 50, 0.1);
 
             if (player.body.touching.down || player.body.onFloor()) jumpCount = 0;
         }

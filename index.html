@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Remy Adventure - Fixed</title>
+    <title>Remy Adventure - Fixed Boxes & Sound</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
@@ -14,13 +14,22 @@
     <script>
         const config = {
             type: Phaser.AUTO,
-            scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 800, height: 1200 },
-            physics: { default: 'arcade', arcade: { gravity: { y: 2200 }, debug: false } },
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+                width: 800,
+                height: 1200 
+            },
+            physics: {
+                default: 'arcade',
+                arcade: { gravity: { y: 2200 }, debug: false } 
+            },
             input: { activePointers: 3 }, 
             scene: { preload: preload, create: create, update: update }
         };
 
-        let player, sonny, platforms, boxes, scoreText;
+        // حذفنا sonny من المتغيرات
+        let player, platforms, boxes, scoreText;
         let score = 0, jumpCount = 0;
         let moveLeft = false, moveRight = false;
 
@@ -30,73 +39,77 @@
             this.load.image('space', 'https://labs.phaser.io/assets/skies/space3.png');
             this.load.image('box', 'https://labs.phaser.io/assets/sprites/block.png');
             this.load.image('remy', 'remy.png'); 
-            this.load.image('sonny', 'https://labs.phaser.io/assets/sprites/ghost.png');
-            this.load.image('coin', 'https://labs.phaser.io/assets/sprites/coin.png'); // صورة العملة
+            this.load.image('coin', 'https://labs.phaser.io/assets/sprites/coin.png'); // صورة العملة للتأثير
             
+            // تحميل الأصوات
             this.load.audio('coinSound', 'Picked Coin Echo 2.wav');
             this.load.audio('gameMusic', 'pixel_spy_vs_spy.mp3');
         }
 
         function create() {
-            // الخلفية
             let bg = this.add.image(400, 600, 'space').setScrollFactor(0);
             bg.setDisplaySize(800, 1200);
 
+            // تشغيل موسيقى الخلفية
             try {
                 let music = this.sound.add('gameMusic', { volume: 0.4, loop: true });
                 music.play();
-            } catch(e) {}
+            } catch(e) { console.log("Music load error"); }
 
             this.physics.world.setBounds(0, 0, 100000, 1200);
 
             platforms = this.physics.add.staticGroup();
             boxes = this.physics.add.staticGroup();
 
-            // --- تعديل الأرضية (أنزلناها للأسفل لـ 1150 بدل 1080) ---
-            let groundTop = this.add.rectangle(400, 1150, 100000, 100, 0x0000ff).setOrigin(0.5).setDepth(2);
+            // الأرضية كما طلبت (1080)
+            let groundTop = this.add.rectangle(400, 1080, 100000, 60, 0x0000ff).setOrigin(0.5).setDepth(2);
             platforms.add(groundTop);
             this.physics.add.existing(groundTop, true);
 
-            // إنشاء الصناديق
+            // تعديل الصناديق
             for (let i = 1; i < 150; i++) {
-                let x = i * 500 + Math.random() * 200;
-                let y = 950 - Math.random() * 300;
+                let x = i * 450 + Math.random() * 200;
+                let y = 850 - Math.random() * 300;
                 let box = boxes.create(x, y, 'box').setScale(1).refreshBody().setDepth(3);
                 
-                // إضافة خاصية للصندوق: هل يحتوي على ذهب؟ وهل تم ضربه؟
-                box.hasGold = Math.random() > 0.4; // 60% من الصناديق فيها ذهب
-                box.isOpened = false;
+                // تحديد إذا كان الصندوق يحتوي على ذهب (مثلاً 60% من الصناديق)
+                box.hasGold = Math.random() > 0.4; 
+                box.isOpened = false; // لم يفتح بعد
             }
 
-            // ريمي
-            player = this.physics.add.sprite(100, 900, 'remy').setScale(0.35).setDepth(10);
+            player = this.physics.add.sprite(100, 800, 'remy');
+            player.setScale(0.35); 
+            player.setDepth(10);
             player.setCollideWorldBounds(true);
+            
             player.body.setSize(player.width * 0.4, 150); 
             player.body.setOffset(player.width * 0.3, player.height - 150);
 
-            sonny = this.add.sprite(100, 950, 'sonny').setScale(0.8).setDepth(9);
+            // تم حذف سوني من هنا
 
             this.cameras.main.startFollow(player, true, 0.1, 0.1);
+            this.cameras.main.setBounds(0, 0, 100000, 1200);
             this.cameras.main.setZoom(0.95);
 
             scoreText = this.add.text(40, 50, 'Tokens: ' + score, { fontSize: '45px', fill: '#fff' }).setScrollFactor(0).setDepth(500);
 
             this.physics.add.collider(player, platforms);
-
-            // --- برمجة الصناديق الجديدة ---
+            
+            // تعديل التصادم مع الصناديق
             this.physics.add.collider(player, boxes, (p, b) => {
                 if (p.body.touching.up) {
-                    // إذا كان الصندوق لم يفتح بعد ويحتوي على ذهب
+                    // إذا الصندوق فيه ذهب ولم يفتح سابقاً
                     if (!b.isOpened && b.hasGold) {
-                        b.isOpened = true; // اجعله مفتوحاً فلا يعطي نقاطاً مرة أخرى
-                        b.setTint(0x888888); // تغيير لونه ليدل أنه فُرغ
+                        b.isOpened = true; // نغلقه
+                        b.setTint(0x888888); // نغير لونه عشان اللاعب يعرف انه خلص
                         
                         try { this.sound.play('coinSound'); } catch(e) {}
+                        
                         score += 10;
                         scoreText.setText('Tokens: ' + score);
 
-                        // تأثير العملة التي تخرج من الصندوق
-                        let coin = this.add.image(b.x, b.y - 40, 'coin').setScale(0.6).setDepth(5);
+                        // إخراج العملة (تأثير بصري)
+                        let coin = this.add.image(b.x, b.y - 40, 'coin').setScale(0.6).setDepth(4);
                         this.tweens.add({
                             targets: coin,
                             y: coin.y - 120,
@@ -105,38 +118,55 @@
                             onComplete: () => coin.destroy()
                         });
                     }
-                    // حركة اهتزاز الصندوق حتى لو كان فارغاً
+                    // حركة اهتزاز للصندوق عند الضربة
                     this.tweens.add({ targets: b, y: b.y - 10, duration: 50, yoyo: true });
                 }
             });
 
-            // الأزرار
+            // --- الأزرار ---
             const btnY = 1140; 
             const leftBtn = this.add.circle(120, btnY, 90, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(500);
+            this.add.text(100, btnY - 35, '<', { fontSize: '70px', fill: '#000' }).setScrollFactor(0).setDepth(501);
+            
             const rightBtn = this.add.circle(680, btnY, 90, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(500);
+            this.add.text(660, btnY - 35, '>', { fontSize: '70px', fill: '#000' }).setScrollFactor(0).setDepth(501);
+
             const jumpBtn = this.add.rectangle(400, btnY, 300, 130, 0xffffff, 0.5).setInteractive().setScrollFactor(0).setDepth(500);
-            this.add.text(100, btnY-35, '<', {fontSize:'70px', fill:'#000'}).setScrollFactor(0).setDepth(501);
-            this.add.text(660, btnY-35, '>', {fontSize:'70px', fill:'#000'}).setScrollFactor(0).setDepth(501);
-            this.add.text(340, btnY-25, 'JUMP', {fontSize:'45px', fill:'#000', fontStyle:'bold'}).setScrollFactor(0).setDepth(501);
+            this.add.text(340, btnY - 25, 'JUMP', { fontSize: '45px', fill: '#000', fontStyle: 'bold' }).setScrollFactor(0).setDepth(501);
 
             leftBtn.on('pointerdown', () => moveLeft = true);
             leftBtn.on('pointerup', () => moveLeft = false);
+            leftBtn.on('pointerout', () => moveLeft = false);
+
             rightBtn.on('pointerdown', () => moveRight = true);
             rightBtn.on('pointerup', () => moveRight = false);
+            rightBtn.on('pointerout', () => moveRight = false);
+
             jumpBtn.on('pointerdown', () => {
-                if (player.body.touching.down) { jumpCount = 1; player.setVelocityY(-1100); }
-                else if (jumpCount === 1) { jumpCount = 2; player.setVelocityY(-950); }
+                if (player.body.touching.down || player.body.onFloor()) {
+                    jumpCount = 1;
+                    player.setVelocityY(-1100); 
+                } else if (jumpCount === 1) {
+                    jumpCount = 2;
+                    player.setVelocityY(-950);
+                }
             });
         }
 
         function update() {
-            if (moveLeft) { player.setVelocityX(-500); player.setFlipX(true); }
-            else if (moveRight) { player.setVelocityX(500); player.setFlipX(false); }
-            else { player.setVelocityX(0); }
+            if (moveLeft) {
+                player.setVelocityX(-500);
+                player.setFlipX(true);
+            } else if (moveRight) {
+                player.setVelocityX(500);
+                player.setFlipX(false);
+            } else {
+                player.setVelocityX(0);
+            }
 
-            sonny.x = Phaser.Math.Linear(sonny.x, player.x - (player.flipX ? -40 : 40), 0.1);
-            sonny.y = Phaser.Math.Linear(sonny.y, player.y - 50, 0.1);
-            if (player.body.touching.down) jumpCount = 0;
+            // تم حذف كود حركة سوني من هنا
+
+            if (player.body.touching.down || player.body.onFloor()) jumpCount = 0;
         }
     </script>
 </body>

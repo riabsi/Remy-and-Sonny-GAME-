@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Remy Adventure - Action Edition</title>
+    <title>Remy Adventure - Fixed</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
@@ -28,26 +28,29 @@
         const game = new Phaser.Game(config);
 
         function preload() {
-            // الصور
+            // تحميل الصور الأساسية
             this.load.image('space', 'https://labs.phaser.io/assets/skies/space3.png');
             this.load.image('box', 'https://labs.phaser.io/assets/sprites/block.png');
             this.load.image('remy', 'remy.png'); 
             this.load.image('sonny', 'https://labs.phaser.io/assets/sprites/ghost.png');
+            
+            // تحميل الوحوش (تأكد أن الملفات بنفس الاسم على جيت هاب)
             this.load.image('snake', 'earth004.png'); 
-            this.load.image('coinEffect', 'https://labs.phaser.io/assets/sprites/coin.png'); // صورة عملة مؤقتة للتأثير
-
-            // الأصوات
+            
+            // تحميل الأصوات
             this.load.audio('coinSound', 'Picked Coin Echo 2.wav');
             this.load.audio('gameMusic', 'pixel_spy_vs_spy.mp3');
         }
 
         function create() {
-            let bg = this.add.image(400, 600, 'space').setScrollFactor(0);
-            bg.setDisplaySize(800, 1200);
+            // إضافة الخلفية
+            this.add.image(400, 600, 'space').setScrollFactor(0).setDisplaySize(800, 1200);
 
-            // تشغيل موسيقى اللعبة (تكرار دائم)
-            bgMusic = this.sound.add('gameMusic', { volume: 0.5, loop: true });
-            bgMusic.play();
+            // تشغيل الموسيقى بحذر (إذا لم تعمل لن يتوقف الكود)
+            try {
+                bgMusic = this.sound.add('gameMusic', { volume: 0.5, loop: true });
+                bgMusic.play();
+            } catch (e) { console.log("Music error"); }
 
             this.physics.world.setBounds(0, 0, 100000, 1200);
 
@@ -64,7 +67,7 @@
                 boxes.create(x, y, 'box').setScale(1).refreshBody().setDepth(3);
             }
 
-            // إعداد ريمي (مقاساتك 0.35)
+            // ريمي بمقاسك 0.35
             player = this.physics.add.sprite(100, 800, 'remy').setScale(0.35).setDepth(10);
             player.setCollideWorldBounds(true);
             player.body.setSize(player.width * 0.4, 150); 
@@ -72,58 +75,42 @@
 
             sonny = this.add.sprite(100, 850, 'sonny').setScale(0.8).setDepth(9);
 
-            // إعداد الوحوش (الأفعى)
+            // الوحوش
             enemies = this.physics.add.group();
-            for (let j = 1; j < 50; j++) {
-                let enemy = enemies.create(j * 1200, 1000, 'snake').setScale(0.5);
+            for (let j = 1; j < 30; j++) {
+                let enemy = enemies.create(j * 1500 + 800, 1000, 'snake').setScale(0.5);
                 enemy.setCollideWorldBounds(true);
                 enemy.setVelocityX(-200);
             }
 
-            // الكاميرا (زوم 0.95)
             this.cameras.main.startFollow(player, true, 0.1, 0.1);
-            this.cameras.main.setBounds(0, 0, 100000, 1200);
             this.cameras.main.setZoom(0.95);
 
             scoreText = this.add.text(40, 50, 'Tokens: ' + score, { fontSize: '45px', fill: '#fff' }).setScrollFactor(0).setDepth(500);
 
             this.physics.add.collider(player, platforms);
             
-            // --- برمجة ضرب الصندوق من الأسفل وظهور العملة ---
-            this.physics.add.collider(player, boxes, (player, box) => {
-                if (player.body.touching.up) {
-                    // تشغيل الصوت
-                    this.sound.play('coinSound');
+            // تصادم الصناديق
+            this.physics.add.collider(player, boxes, (p, b) => {
+                if (p.body.touching.up) {
+                    try { this.sound.play('coinSound'); } catch(e){}
                     score += 10;
                     scoreText.setText('Tokens: ' + score);
-
-                    // إظهار عملة تطير وتختفي
-                    let coin = this.add.image(box.x, box.y - 50, 'coinEffect').setScale(0.5).setDepth(4);
-                    this.tweens.add({
-                        targets: coin,
-                        y: coin.y - 100,
-                        alpha: 0,
-                        duration: 500,
-                        onComplete: () => coin.destroy()
-                    });
-                    
-                    // تحريك الصندوق للأعلى قليلاً
-                    this.tweens.add({ targets: box, y: box.y - 10, duration: 50, yoyo: true });
+                    this.tweens.add({ targets: b, y: b.y - 10, duration: 50, yoyo: true });
                 }
             });
 
-            // تصادم الوحش
-            this.physics.add.overlap(player, enemies, (player, enemy) => {
-                if (player.body.touching.down) {
-                    enemy.destroy();
-                    player.setVelocityY(-800);
+            // تصادم الوحوش
+            this.physics.add.overlap(player, enemies, (p, e) => {
+                if (p.body.touching.down) {
+                    e.destroy();
+                    p.setVelocityY(-800);
                 } else {
                     this.scene.restart();
-                    score = 0;
                 }
             });
 
-            // --- الأزرار ---
+            // الأزرار
             const btnY = 1140; 
             const leftBtn = this.add.circle(120, btnY, 90, 0xffffff, 0.4).setInteractive().setScrollFactor(0).setDepth(500);
             this.add.text(100, btnY - 35, '<', { fontSize: '70px', fill: '#000' }).setScrollFactor(0).setDepth(501);
@@ -137,13 +124,7 @@
             rightBtn.on('pointerdown', () => moveRight = true);
             rightBtn.on('pointerup', () => moveRight = false);
             jumpBtn.on('pointerdown', () => {
-                if (player.body.touching.down || player.body.onFloor()) {
-                    jumpCount = 1;
-                    player.setVelocityY(-1100); 
-                } else if (jumpCount === 1) {
-                    jumpCount = 2;
-                    player.setVelocityY(-950);
-                }
+                if (player.body.touching.down) player.setVelocityY(-1100);
             });
         }
 
@@ -155,11 +136,8 @@
             sonny.x = Phaser.Math.Linear(sonny.x, player.x - (player.flipX ? -40 : 40), 0.1);
             sonny.y = Phaser.Math.Linear(sonny.y, player.y - 50, 0.1);
 
-            if (player.body.touching.down || player.body.onFloor()) jumpCount = 0;
-
-            // حركة الوحوش ذهاباً وإياباً
             enemies.children.iterate((enemy) => {
-                if (enemy && (enemy.body.blocked.left || enemy.body.blocked.right)) {
+                if (enemy && enemy.body && (enemy.body.blocked.left || enemy.body.blocked.right)) {
                     enemy.setVelocityX(enemy.body.velocity.x * -1);
                 }
             });

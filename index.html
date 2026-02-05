@@ -1,69 +1,119 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Remy & Sonny - Mobile Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-    <style> body { margin: 0; background: #000; display: flex; justify-content: center; } </style>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
+        #game-container { width: 100vw; height: 100vh; }
+    </style>
 </head>
 <body>
-<script>
-    const config = {
-        type: Phaser.AUTO,
-        width: 800, height: 600,
-        physics: { default: 'arcade', arcade: { gravity: { y: 500 }, debug: false } },
-        scene: { preload: preload, create: create, update: update }
-    };
+    <div id="game-container"></div>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            parent: 'game-container',
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+                width: 800,
+                height: 600
+            },
+            physics: {
+                default: 'arcade',
+                arcade: { gravity: { y: 600 }, debug: false }
+            },
+            scene: { preload: preload, create: create, update: update }
+        };
 
-    let player; // ريمي
-    let sonny;  // سوني
-    let coins;
-    let score = 100; // رصيدك الأولي يا رياض
-    let scoreText;
+        let player; // ريمي
+        let sonny;  // سوني
+        let platforms;
+        let score = 100;
+        let scoreText;
+        let jumpCount = 0; // لحساب القفزات (Double Jump)
+        let moveLeft = false;
+        let moveRight = false;
 
-    const game = new Phaser.Game(config);
+        const game = new Phaser.Game(config);
 
-    function preload() {
-        // هنا يتم وضع روابط الصور الخاصة بريمي وسوني والصناديق
-        this.load.image('sky', 'https://labs.phaser.io/assets/skies/space3.png');
-        this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
-        this.load.image('coin', 'https://labs.phaser.io/assets/sprites/coin.png');
-        this.load.image('remy', 'https://labs.phaser.io/assets/sprites/phaser-dude.png'); // ريمي مؤقتاً
-        this.load.image('sonny', 'https://labs.phaser.io/assets/sprites/ghost.png'); // سوني مؤقتاً
-    }
+        function preload() {
+            this.load.image('background', 'https://labs.phaser.io/assets/skies/gradient24.png');
+            this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
+            this.load.image('remy', 'https://labs.phaser.io/assets/sprites/phaser-dude.png'); 
+            this.load.image('sonny', 'https://labs.phaser.io/assets/sprites/ghost.png');
+        }
 
-    function create() {
-        this.add.image(400, 300, 'sky');
-        let platforms = this.physics.add.staticGroup();
-        platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+        function create() {
+            // الخلفية ملء الشاشة
+            let bg = this.add.image(400, 300, 'background');
+            bg.setDisplaySize(800, 600);
 
-        // إنشاء ريمي
-        player = this.physics.add.sprite(100, 450, 'remy');
-        player.setBounce(0.2);
-        player.setCollideWorldBounds(true);
+            platforms = this.physics.add.staticGroup();
+            platforms.create(400, 580, 'ground').setScale(2).refreshBody();
 
-        // إنشاء سوني (يتبع ريمي)
-        sonny = this.add.sprite(80, 420, 'sonny').setScale(0.8);
+            // إعداد ريمي
+            player = this.physics.add.sprite(100, 450, 'remy');
+            player.setCollideWorldBounds(true);
 
-        // نظام النقاط
-        scoreText = this.add.text(16, 16, 'Tokens: ' + score, { fontSize: '32px', fill: '#FFF' });
+            // إعداد سوني
+            sonny = this.add.sprite(100, 400, 'sonny').setScale(0.6).setAlpha(0.8);
 
-        this.physics.add.collider(player, platforms);
-        
-        // إعداد التحكم
-        cursors = this.input.keyboard.createCursorKeys();
-    }
+            scoreText = this.add.text(16, 16, 'Tokens: ' + score, { fontSize: '32px', fill: '#fff' });
 
-    function update() {
-        // تحريك ريمي
-        if (cursors.left.isDown) player.setVelocityX(-160);
-        else if (cursors.right.isDown) player.setVelocityX(160);
-        else player.setVelocityX(0);
+            this.physics.add.collider(player, platforms);
 
-        if (cursors.up.isDown && player.body.touching.down) player.setVelocityY(-330);
+            // --- أزرار التحكم (UI) ---
+            
+            // زر اليسار (في الزاوية اليسرى)
+            const leftBtn = this.add.rectangle(100, 500, 120, 100, 0x000000, 0.5).setInteractive();
+            this.add.text(80, 485, '<', { fontSize: '40px', fill: '#fff' });
+            leftBtn.on('pointerdown', () => { moveLeft = true; });
+            leftBtn.on('pointerup', () => { moveLeft = false; });
 
-        // جعل سوني يتبع ريمي بسلاسة (الذكاء الاصطناعي لسوني)
-        sonny.x = Phaser.Math.Linear(sonny.x, player.x - 40, 0.1);
-        sonny.y = Phaser.Math.Linear(sonny.y, player.y - 50, 0.1);
-    }
-</script>
+            // زر اليمين (في الزاوية اليمنى)
+            const rightBtn = this.add.rectangle(700, 500, 120, 100, 0x000000, 0.5).setInteractive();
+            this.add.text(685, 485, '>', { fontSize: '40px', fill: '#fff' });
+            rightBtn.on('pointerdown', () => { moveRight = true; });
+            rightBtn.on('pointerup', () => { moveRight = false; });
+
+            // زر القفز (في المنتصف)
+            const jumpBtn = this.add.rectangle(400, 500, 150, 100, 0x0000ff, 0.5).setInteractive();
+            this.add.text(355, 485, 'JUMP', { fontSize: '30px', fill: '#fff' });
+            
+            jumpBtn.on('pointerdown', () => {
+                if (player.body.touching.down) {
+                    jumpCount = 1;
+                    player.setVelocityY(-300); // النطة الأولى
+                } else if (jumpCount === 1) {
+                    jumpCount = 2;
+                    player.setVelocityY(-450); // النطة الثانية (أعلى)
+                }
+            });
+        }
+
+        function update() {
+            // تحريك ريمي
+            if (moveLeft) {
+                player.setVelocityX(-160);
+            } else if (moveRight) {
+                player.setVelocityX(160);
+            } else {
+                player.setVelocityX(0);
+            }
+
+            // سوني يتبع ريمي بسلاسة
+            sonny.x = Phaser.Math.Linear(sonny.x, player.x - 40, 0.1);
+            sonny.y = Phaser.Math.Linear(sonny.y, player.y - 50, 0.1);
+
+            // تصفير عداد القفز عند ملامسة الأرض
+            if (player.body.touching.down) {
+                jumpCount = 0;
+            }
+        }
+    </script>
 </body>
 </html>
